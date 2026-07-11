@@ -15,10 +15,10 @@ Busca canciones, selecciona con fzf y reproduce con mpv sin video.
 - [socat](http://www.dest-unreach.org/socat/)
 - curl
 - Alacritty
-- bspwm (para ventanas flotantes)
+- bspwm (opcional, solo para las ventanas flotantes)
 
 ```
-sudo pacman -S mpv yt-dlp jq fzf socat curl alacritty bspwm
+sudo pacman -S mpv yt-dlp jq fzf socat curl alacritty
 ```
 
 ## Instalación
@@ -73,6 +73,6 @@ Genera `links.txt` con las URLs de YouTube.
 
 - Depende de los endpoints internos de YouTube Music (pueden romperse).
 - Usa Alacritty como terminal temporal (hardcodeado).
-- Las ventanas flotantes usan `bspc rule` (solo bspwm).
+- Las ventanas flotantes usan `bspc rule` (solo bspwm; si usas otro WM ignora esa parte, todo lo demás funciona igual).
 - No tiene cola de reproducción visible ni interfaz gráfica.
 - El token de la API de YouTube Music no es público ni documentado por Google.
