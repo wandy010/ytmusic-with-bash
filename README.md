@@ -1,12 +1,12 @@
 # ytconsole
 
-Reproductor de YouTube Music desde la terminal.
+Reproductor de YouTube Music desde la terminal para Arch Linux.
 
 Busca canciones, selecciona con fzf y reproduce con mpv sin video.
-Integración con bspwm, polybar y controles por teclado.
 
 ## Requisitos
 
+- Arch Linux (o cualquier distro con los paquetes)
 - bash
 - [mpv](https://mpv.io)
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp)
@@ -15,7 +15,11 @@ Integración con bspwm, polybar y controles por teclado.
 - [socat](http://www.dest-unreach.org/socat/)
 - curl
 - Alacritty
-- bspwm
+- bspwm (para ventanas flotantes)
+
+```
+sudo pacman -S mpv yt-dlp jq fzf socat curl alacritty bspwm
+```
 
 ## Instalación
 
@@ -27,7 +31,7 @@ chmod +x *.sh
 
 ## Uso
 
-### Buscar y reproducir
+### Buscar y reproducir (script principal)
 
 ```
 ./bar_busq.sh
@@ -36,25 +40,17 @@ chmod +x *.sh
 Escribe el nombre de una canción, selecciona con fzf y empieza a sonar.
 Se genera una playlist con canciones relacionadas.
 
-### Controles
+### Controles (scripts individuales)
 
-| Comando | Acción |
+| Script | Acción |
 |---|---|
 | `./yt-music-next.sh` | Siguiente canción |
 | `./yt-music-prev.sh` | Canción anterior |
 | `./yt-music-toggle.sh` | Pausar / reanudar |
 | `./yt-music-stop.sh` | Detener y limpiar |
 
-### Polybar
-
-Agrega esto a tu polybar config:
-
-```
-[module/ytmusic]
-type = custom/script
-exec = ~/ytmusic-with-bash/yt-music-polybar.sh
-interval = 1
-```
+Puedes asignar estos scripts a keybinds de tu WM o a botones en tu barra
+(polybar, waybar, eww, etc).
 
 ### Obtener links desde lista de nombres
 
