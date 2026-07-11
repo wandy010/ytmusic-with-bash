@@ -1,4 +1,4 @@
-# ytconsole
+# yt music with bash
 
 Reproductor de YouTube Music desde la terminal para Arch Linux.
 
