@@ -52,22 +52,17 @@ Se genera una playlist con canciones relacionadas.
 Puedes asignar estos scripts a keybinds de tu WM o a botones en tu barra
 (polybar, waybar, eww, etc).
 
-### Obtener links desde lista de nombres
+### Flujo del proyecto
 
-Crea `names.txt` con un nombre por línea:
+- **`bar_busq.sh`** → script principal. Abre una ventana para que escribas
+  una canción, busca en YouTube Music, te deja elegir una con fzf y la
+  reproduce con mpv. Además genera una playlist con canciones relacionadas.
+  Los controles (siguiente, anterior, pausa, stop) se manejan con los scripts
+  `yt-music-*.sh`.
 
-```
-Bohemian Rhapsody
-Stairway to Heaven
-```
-
-Luego ejecuta:
-
-```
-./get_links.sh
-```
-
-Genera `links.txt` con las URLs de YouTube.
+- **`get_links.sh`** → script secundario. Convierte una lista de nombres
+  (`names.txt`, un nombre por línea) a URLs de YouTube y las guarda en
+  `links.txt`. Útil si solo quieres recolectar enlaces sin reproducir.
 
 ## Limitaciones
 
