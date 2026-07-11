@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "bash-scripting": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bash-scripting/SKILL.md",
+      "computedHash": "1c2080bc5de9996ee17a8f550aa8744ed9207873d4243073e99961b2c1f1685e"
+    }
+  }
+}

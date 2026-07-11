@@ -1,0 +1,955 @@
+╔══════════════════════════════════════════════════════════════╗
+║        PLAN DE APRENDIZAJE — ytconsole                      ║
+║        De 0 a entender TODO el proyecto                     ║
+╚══════════════════════════════════════════════════════════════╝
+
+Proyecto: Reproductor de YouTube Music en terminal (bash + mpv)
+Objetivo: Entender y modificar cada archivo del proyecto
+
+
+═══════════════════════════════════════════════════════════════
+FASE 0: LA TERMINAL — tu nuevo hogar (1 semana)
+═══════════════════════════════════════════════════════════════
+
+0.1  Navegación básica
+─────────────────────
+  pwd                  → Dónde estoy (/home/user/...)
+  ls                   → Qué hay
+  ls -la               → Todo (incluye ocultos)
+  cd directorio        → Entrar a directorio
+  cd ..                → Subir un nivel
+  cd ~                 → Ir a tu home
+
+  📌 EN EL PROYECTO: ls ~/Documents/scripts/ytconsole/
+
+
+0.2  Archivos y rutas
+─────────────────────
+  cat archivo          → Ver contenido
+  less archivo         → Ver archivo paginado
+  head -n 10 archivo   → Primeras 10 líneas
+  tail -n 10 archivo   → Últimas 10 líneas
+  mkdir directorio     → Crear carpeta
+  rm archivo           → Borrar (CUIDADO: no va a papelera)
+  rm -rf directorio/   → Borrar todo (MUCHO CUIDADO)
+  mv origen destino    → Mover / renombrar
+  cp origen destino    → Copiar
+
+  📌 EN EL PROYECTO: cp bar_busq.sh bar_busq.sh.backup
+
+  RUTAS IMPORTANTES:
+    /tmp/              → Archivos temporales (se borran al reiniciar)
+    /home/user/        → Tu home (~)
+    /home/user/.cache/ → Caché de programas
+    /usr/bin/          → Programas instalados
+
+  📌 EN EL PROYECTO:
+    CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/ytmusic"
+    → Guarda playlist.txt en ~/.cache/ytmusic/
+
+
+0.3  Wildcards y expansión de rutas
+────────────────────────────────────
+  *      → Cualquier cosa: ls *.sh → todos los scripts
+  ?      → Un caracter: ls ???.sh → archivos de 3 letras .sh
+  ~      → Tu home: cd ~/ytconsole
+
+  📌 EN EL PROYECTO: los yt-music-*.sh
+
+
+0.4  Ejecución de scripts
+─────────────────────────
+  ./script.sh          → Ejecutar script del directorio actual
+  bash script.sh       → Ejecutar con bash explícito
+  chmod +x script.sh   → Dar permiso de ejecución
+  PATH=$PATH:~/scripts → Agregar carpeta al PATH
+
+  📌 EN EL PROYECTO: ./bar_busq.sh
+
+
+═══════════════════════════════════════════════════════════════
+FASE 1: BASH — el idioma del proyecto (3 semanas)
+═══════════════════════════════════════════════════════════════
+
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+SEMANA 1: Fundamentos del lenguaje
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+
+
+1.1  Shebang — la primera línea
+────────────────────────────────
+  #!/usr/bin/env bash
+  → Le dice al sistema "ejecutame con bash"
+  → SIN ESTO NO FUNCIONA como script
+
+  📌 EN EL PROYECTO: TODOS los .sh empiezan con esto
+
+
+1.2  Variables
+────────────────
+  nombre="Andres"           ← Así se asigna (SIN espacios junto al =)
+  readonly PI=3.1416        ← No se puede cambiar después
+
+  echo "$nombre"            ← $nombre vale "Andres"
+  echo '${nombre}'          ← ${nombre} literal (no expande)
+
+  📌 EN EL PROYECTO:
+    CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/ytmusic"
+    SOCKET="/tmp/mpv-socket"
+    PLAYLIST="$CACHE/playlist.txt"
+
+
+1.3  REGLA DE ORO: siempre "$VAR" (con comillas dobles)
+────────────────────────────────────────────────────────
+  Mal:  rm -rf $DIR       → Si DIR="cosas importantes/", borra "cosas" y luego falla
+  Bien: rm -rf "$DIR"     → Borra "cosas importantes/" correctamente
+
+  📌 EN EL PROYECTO — ejemplos de uso correcto:
+    alacritty -e "$INPUT_SCRIPT"    ← sin comillas rompe si la ruta tiene espacios
+    rm -f "$RESULT_FILE"            ← siempre con comillas
+    mpv_send "$(jq ...)"            ← resultado de jq dentro de comillas
+
+
+1.4  EXPANSIÓN DE VARIABLES 🧠 (esto es clave)
+───────────────────────────────────────────────
+
+  ${VAR:-default}    → Si VAR no existe, usa "default"
+  ${VAR:=default}    → Si VAR no existe, la asigna y usa "default"
+  ${#VAR}            → Largo de VAR
+  ${VAR:0:5}         → Primeros 5 caracteres
+
+  📌 EN EL PROYECTO:
+    ${XDG_CACHE_HOME:-$HOME/.cache}
+    → Si XDG_CACHE_HOME no existe, usa $HOME/.cache
+
+    ${#title} -gt 40
+    → Si el título tiene más de 40 caracteres
+
+    ${title:0:$((MAX-1))}
+    → Corta el título a 39 caracteres + "…"
+
+
+1.5  Comillas: simples vs dobles 🧠
+─────────────────────────────────────
+
+  'texto' → Literal, NO expande NADA
+  "texto" → Expande $variables y $(comandos)
+  
+  DENTRO DE SIMPLES: $, `, ", \, TODO es literal
+  DENTRO DE DOBLES: $ se expande, ` se ejecuta, \ escapa
+
+  📌 EN EL PROYECTO — los heredocs:
+    cat > archivo << 'INPUTEOF'    ← CON comillas: $NO se expande
+    cat > archivo << INPUTEOF     ← SIN comillas: $SÍ se expande
+  
+  📌 EJEMPLO del bug que tuvimos:
+    # MAL:
+    echo "mpv --title=\"$TITLE\""  → Si TITLE tiene $, se expande
+    # BIEN:
+    alacritty -e mpv --title="$TITLE"  → La variable viaja como argumento
+
+
+1.6  Condicionales [[ ]] (siempre con doble corchete)
+───────────────────────────────────────────────────────
+
+  [[ -z "$VAR" ]]     → VAR está vacío (zero length)
+  [[ -n "$VAR" ]]     → VAR NO está vacío
+  [[ -f "$ARCHIVO" ]] → Archivo existe
+  [[ -d "$DIR" ]]     → Directorio existe
+  [[ -S "$SOCKET" ]]  → Socket existe
+  [[ -s "$ARCHIVO" ]] → Archivo NO está vacío (size > 0)
+  [[ "$A" = "$B" ]]   → A es igual a B
+  [[ "$A" != "$B" ]]  → A es diferente de B
+
+  📌 EN EL PROYECTO:
+    [[ -z "$QUERY" ]] && exit 0
+    → Si no escribiste nada, salir
+
+    [[ ! -s "$TMPFILE" ]] && notify-send "Sin resultados"
+    → Si el archivo de resultados está vacío
+
+    [ -S "$SOCKET" ]
+    → Verificar si el socket de mpv existe (polybar.sh)
+
+    [[ "$paused" = "true" ]] && echo "󰐊" || echo "󰏤"
+    → Mostrar icono según estado
+
+
+1.7  Encadenar comandos: && y ||
+───────────────────────────────────
+
+  cmd1 && cmd2    → Ejecuta cmd2 SOLO si cmd1 funciona (exit 0)
+  cmd1 || cmd2    → Ejecuta cmd2 SOLO si cmd1 falla (exit ≠ 0)
+  cmd1 ; cmd2     → Ejecuta cmd2 siempre, funcione o no cmd1
+
+  📌 EN EL PROYECTO:
+    [[ -z "$QUERY" ]] && exit 0
+    → Si no hay query, salir (y no seguir)
+
+    pkill -f "mpv.*--no-video" 2>/dev/null || true
+    → Si pkill falla (no encontró proceso), no pasa nada (true)
+
+    rm -f x.jpg ; rm -f y.jpg
+    → Borra ambos sin importar el resultado de cada uno
+
+
+1.8  Capturar output de comandos
+───────────────────────────────────
+
+  VARIABLE=$(comando)         ← Con $
+  VARIABLE=$(comando arg arg) ← Con argumentos
+  VARIABLE=`comando`          ← Vieja escuela, evitar
+
+  📌 EN EL PROYECTO:
+    QUERY=$(cat "$INPUT_RESULT" 2>/dev/null | xargs)
+    → Lee lo que escribiste
+
+    RESPONSE=$(curl -s -X POST ... -d "$JSON_BODY")
+    → Guarda la respuesta de YouTube
+
+    TMPFILE=$(mktemp /tmp/ytmusic.XXXXXX)
+    → Crea archivo temporal y guarda su nombre
+
+    title=$(mpv_send '...' | jq -r '.data // empty')
+    → Obtiene título de la canción actual
+
+
+1.9  Exit codes y salida del script
+─────────────────────────────────────
+  exit 0   → Salir BIEN (éxito)
+  exit 1   → Salir MAL (error)
+  exit     → Salir con el último código
+
+  📌 EN EL PROYECTO:
+    [[ -z "$QUERY" ]] && exit 0    → Salir si no hay búsqueda
+    [[ ! -s "$TMPFILE" ]] && exit 0  → Salir sin resultados
+
+
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+SEMANA 2: Archivos, texto y redirecciones
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+
+
+2.1  Redirecciones básicas
+───────────────────────────
+  > archivo     → Escribe (SOBREESCRIBE)
+  >> archivo    → Escribe al FINAL (append)
+  < archivo     → Lee desde archivo
+  2> error.log  → Redirige errores
+  2>/dev/null   → Tira errores a la basura
+  &> archivo    → stdout + stderr al mismo archivo
+
+  📌 EN EL PROYECTO:
+    > "$PLAYLIST"              → Crea/sobrescribe el archivo de playlist
+    jq ... 2>/dev/null         → Errores de jq no se ven
+    echo "$RESPONSE" | jq ...  → Pipe: output de echo a jq
+    socat - "$SOCKET" 2>/dev/null → Errores de socat ocultos
+
+
+2.2  Heredoc: generar archivos desde un script 🧠
+─────────────────────────────────────────────────────
+
+  cat > "$ARCHIVO" << 'DELIMITADOR'
+  Contenido del archivo
+  $VARIABLE → CON comillas en DELIMITADOR: NO expande
+  DELIMITADOR
+
+  SIN comillas en el delimitador:
+  cat > "$ARCHIVO" << DELIMITADOR
+  $VARIABLE → SIN comillas: SÍ expande
+  DELIMITADOR
+
+  📌 EN EL PROYECTO:
+    cat > "$INPUT_SCRIPT" << 'INPUTEOF'
+    #!/usr/bin/env bash
+    clear
+    echo -e "..."
+    read -r QUERY
+    echo "$QUERY" > "$INPUT_RESULT"   ← $INPUT_RESULT es LITERAL aquí
+    INPUTEOF
+    # El 'INPUTEOF' con comillas hace que $INPUT_RESULT no se expanda AHORA
+    # Se expandirá cuando el script generado se ejecute (y INPUT_RESULT esté exportada)
+
+
+2.3  Procesar texto: grep
+───────────────────────────
+  grep "patrón" archivo    → Buscar líneas que contienen "patrón"
+  grep -v "patrón"         → Excluir líneas con "patrón"
+  grep -E "regex"          → Regex extendida
+  grep -F "texto"          → Texto fijo (más rápido, sin regex)
+  grep -c "patrón"         → Contar coincidencias
+  head -n 5                → Primeras 5 líneas
+  tail -n 5                → Últimas 5 líneas
+
+  📌 EN EL PROYECTO:
+    grep -E '^[^│]+ │ [^│]+ │ [a-zA-Z0-9_-]+$' "$TMPFILE"
+    → Líneas con formato: TÍTULO │ ARTISTA │ ID
+
+    grep -n -F "$SELECTED_ID" "$TMPFILE"
+    → Busca el ID exacto y devuelve número de línea
+
+    head -n 5
+    → Solo los primeros 5 resultados
+
+
+2.4  Procesar texto: awk (lo básico)
+───────────────────────────────────────
+  awk -F'separador' '{print $1}'
+  → Divide cada línea por "separador" y muestra el campo 1
+
+  📌 EN EL PROYECTO — AWK está por todos lados:
+    awk -F' │ ' '{print $3}'
+    → Toma el tercer campo (el ID del video)
+
+    awk -F' │ ' '!seen[$3]++'
+    → Elimina duplicados por ID ($3)
+
+    awk -F' │ ' '{gsub(/^[[:space:]]+|[[:space:]]+$/, "", $NF); print $NF}'
+    → Saca espacios al inicio/final del último campo y lo imprime
+
+
+2.5  sed: editar texto (lo justo)
+───────────────────────────────────
+  sed -n "${N}p" archivo    → Imprime la línea N
+
+  📌 EN EL PROYECTO:
+    sed -n "${LINE}p" "$TMPFILE" | awk -F' │ ' '{print $3}'
+    → Toma la línea LINE del archivo y extrae el ID
+
+
+2.6  Archivos temporales
+──────────────────────────
+  mktemp /tmp/mi_app.XXXXXX   → Crea archivo temporal ÚNICO
+
+  📌 EN EL PROYECTO:
+    TMPFILE=$(mktemp /tmp/ytmusic.XXXXXX)
+    TMPFILE_FZF=$(mktemp /tmp/ytmusic_fzf.XXXXXX)
+
+
+2.7  trap: limpiar al salir 🧠
+─────────────────────────────────
+  trap 'comando' EXIT    → Ejecuta comando cuando el script termine
+  trap 'comando' ERR     → Ejecuta comando si hay error
+  trap 'comando' INT     → Ejecuta comando si Ctrl+C
+
+  📌 EN EL PROYECTO:
+    trap 'rm -f "$TMPFILE"' EXIT
+    → Cuando el script termine (por cualquier razón), borra el temporal
+
+
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+SEMANA 3: Procesos, background y señales
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+
+
+3.1  Background (&) esperar procesos
+───────────────────────────────────────
+  comando &              → Ejecuta en segundo plano
+  $!                     → PID del último proceso en bg
+  kill -0 $PID           → ¿El proceso sigue vivo? (exit 0 si sí)
+  wait $PID              → Esperar a que termine
+
+  📌 EN EL PROYECTO:
+    alacritty --class ... -e "$INPUT_SCRIPT" &
+    ALAC_PID=$!
+    while kill -0 "$ALAC_PID" 2>/dev/null; do sleep 0.1; done
+    → Lanza Alacritty y espera a que el usuario cierre la ventana
+
+
+3.2  pkill: matar procesos por nombre
+────────────────────────────────────────
+  pkill -f "patrón"      → Mata procesos cuyo nombre coincide con patrón
+  pkill -f "mpv.*--no-video"
+  → Mata todos los mpv que tengan --no-video en su línea de comandos
+
+  📌 EN EL PROYECTO:
+    pkill -f "mpv.*--no-video" 2>/dev/null || true
+    → Mata cualquier mpv anterior antes de abrir uno nuevo
+
+
+3.3  disown: despegar procesos del shell 🧠
+─────────────────────────────────────────────
+  comando &
+  disown
+  → El proceso ya no está atado al shell.
+  → Cuando el script haga exit, el proceso SIGUE VIVO.
+
+  📌 EN EL PROYECTO:
+    alacritty ... -e mpv ... &
+    disown
+    → El Alacritty con mpv sigue vivo aunque bar_busq.sh termine
+
+
+3.4  sleep: esperar
+─────────────────────
+  sleep 0.2    → 0.2 segundos
+  sleep 1      → 1 segundo
+
+  📌 EN EL PROYECTO:
+    sleep 0.2  → Esperar a que mpv termine de cerrarse antes de arrancar otro
+    sleep 0.1  → En el while loop: esperar un poco entre chequeos
+
+
+3.5  La historia del bug que tuvimos 🐛
+──────────────────────────────────────────
+  PROBLEMA:
+    alacritty ... &
+    exit 0
+    → El Alacritty MORÍA al salir el script
+
+  CAUSA:
+    El shell mata los procesos background cuando hace exit
+    (depende de la configuración del terminal)
+
+  SOLUCIÓN:
+    alacritty ... &
+    disown          ← Despega el proceso del shell
+    exit 0          → Ahora sobrevive
+
+  MORALEJA: Siempre disown después de & si querés que el proceso siga vivo.
+
+
+═══════════════════════════════════════════════════════════════
+FASE 2: JSON + jq (1 semana)
+═══════════════════════════════════════════════════════════════
+
+2.1  ¿Qué es JSON?
+───────────────────
+  {
+    "nombre": "Andrés",
+    "edad": 30,
+    "hobbies": ["música", "programar"],
+    "direccion": {
+      "calle": "Av. Siempre Viva",
+      "numero": 123
+    }
+  }
+
+  {}  → Objeto (como un diccionario)
+  []  → Array (como una lista)
+  ""  → Strings SIEMPRE con comillas dobles
+  ,   → Separa elementos
+  :   → Separa clave de valor
+
+
+2.2  YouTube Music API — lo que devuelve
+───────────────────────────────────────────
+  El endpoint /youtubei/v1/search devuelve un JSON enorme.
+  El proyecto extrae solo esto:
+
+  {
+    "musicCardShelfRenderer": {        ← Resultado destacado
+      "title": {
+        "runs": [{"text": "Nombre canción"}]
+      },
+      "subtitle": {
+        "runs": [{"text": "Artista"}, {"text": " • "}, {"text": "2024"}]
+      },
+      "buttons": [{
+        "buttonRenderer": {
+          "command": {
+            "watchEndpoint": {
+              "videoId": "dQw4w9WgXcQ"
+            }
+          }
+        }
+      }]
+    },
+    "musicResponsiveListItemRenderer": {  ← Resultado normal
+      "flexColumns": [...],
+      "playlistItemData": {
+        "videoId": "dQw4w9WgXcQ"
+      }
+    }
+  }
+
+
+2.3  jq — filtros que usa el proyecto
+────────────────────────────────────────
+
+  FILTROS BÁSICOS:
+    .key              → Obtener valor de "key"
+    .a.b.c            → Navegar jerarquía: objeto.a.b.c
+    .[]               → Iterar cada elemento de un array
+    ,                 → Hacer dos consultas separadas
+
+  FILTROS AVANZADOS:
+    ..                → Búsqueda RECURSIVA (busca en TODO el árbol)
+    .algo?            → No falla si "algo" no existe
+    select(condición) → Filtrar elementos
+    //                → Operador "or": a // b = a o si no b
+    test("regex")     → Coincide con expresión regular
+    as $id            → Guardar en variable temporal
+
+  📌 EN EL PROYECTO:
+    [.. | .musicCardShelfRenderer? | select(. != null) |
+      (.buttons[0].buttonRenderer.command.watchEndpoint.videoId // .onTap.watchEndpoint.videoId) as $id |
+      "\(.title.runs[0].text) │ \($id)"]
+
+  TRADUCCIÓN PASO A PASO:
+    ..                                    → Busca en todo el JSON
+    .musicCardShelfRenderer?             → Encuentra el render de tarjeta
+    select(. != null)                     → Solo si no es nulo
+    .buttons[0].buttonRenderer...videoId → Extrae el videoId del botón
+    // .onTap.watchEndpoint.videoId      → Si no encuentra, busca en onTap
+    as $id                                → Guarda el ID en variable
+    "\(...text) │ \($id)"                → Arma la línea de resultado
+
+
+2.4  jq desde bash: jq -nc --arg
+───────────────────────────────────
+  jq -nc --arg query "$QUERY" '{
+    context: { client: { clientName: "WEB_REMIX" } },
+    query: $query
+  }'
+
+  -n   → No leer input (crear JSON desde cero)
+  -c   → Compacto (una línea)
+  --arg nombre "valor"  → Pasar variable de bash a jq
+  $query → Usar la variable DENTRO del filtro jq
+
+  📌 EJEMPLO:
+    query="rock"
+    jq -nc --arg query "$query" '{"q": $query}'
+    → {"q":"rock"}
+
+
+2.5  jq -r y pipes
+─────────────────────
+  jq -r '.data // empty'
+  → -r: output "crudo" (sin comillas alrededor del string)
+
+  📌 EN EL PROYECTO:
+    mpv_send '{"command":["get_property","media-title"]}' | jq -r '.data // empty'
+    → Si mpv responde {"data":"Nombre Canción","error":null}, extrae "Nombre Canción"
+    → Si .data es null, usa "empty" (string vacío)
+
+
+═══════════════════════════════════════════════════════════════
+FASE 3: curl + APIs (3 días)
+═══════════════════════════════════════════════════════════════
+
+3.1  curl — el cliente HTTP
+───────────────────────────────
+  curl URL                 → Hacer GET (obtener)
+  curl -s URL              → Silent (sin barra de progreso)
+  curl -X POST URL         → Hacer POST (enviar datos)
+  curl -H "Header: valor"  → Agregar header HTTP
+  curl -d '{"json": 1}'    → Enviar datos en el body
+  curl -m 10 URL           → Timeout de 10 segundos
+
+  📌 EN EL PROYECTO:
+    curl -s -X POST \
+      "https://music.youtube.com/youtubei/v1/search?prettyPrint=false" \
+      -H "Content-Type: application/json" \
+      -d "$JSON_BODY"
+
+  ¿QUÉ SIGNIFICA CADA PARTE?
+    -s                  → No mostrar barra de progreso
+    -X POST            → Es una petición POST (envío datos)
+    "https://..."       → La URL del endpoint
+    prettyPrint=false   → El JSON comprimido (sin espacios de más)
+    -H "Content-Type: application/json" → Le digo: "esto que mando es JSON"
+    -d "$JSON_BODY"    → El JSON con la búsqueda ("query": "rock")
+
+
+3.2  API REST — conceptos
+───────────────────────────
+  GET     → Obtener datos (como abrir una página)
+  POST    → Enviar datos para que los procesen (como llenar un formulario)
+  PUT     → Actualizar datos existentes
+  DELETE  → Borrar datos
+
+  URL:
+    https://music.youtube.com/youtubei/v1/search?prettyPrint=false
+    ↑ protocolo    ↑ dominio      ↑ ruta         ↑ parámetros
+
+
+═══════════════════════════════════════════════════════════════
+FASE 4: IPC — socat + mpv commands (2 días)
+═══════════════════════════════════════════════════════════════
+
+4.1  ¿Qué es IPC? (Inter-Process Communication)
+─────────────────────────────────────────────────
+  Dos procesos pueden hablar entre sí.
+  En el proyecto: bar_busq.sh/mpv hablan con mpv mediante un socket.
+
+  mpv crea un archivo especial → /tmp/mpv-socket
+  Cualquier script puede escribir en ese archivo → mpv responde
+
+  📌 símil: es como mandarle WhatsApp a otro programa
+
+
+4.2  socat — el mensajero
+───────────────────────────
+  echo '{"comando"}' | socat - /tmp/mpv-socket
+       ↑ envía JSON     ↑   ↑ conecta con socket
+
+  socat - "$SOCKET"     → "-" significa stdin
+
+  📌 EN EL PROYECTO:
+    # mpv_send() en lib.sh:
+    echo "$1" | socat - "$SOCKET" 2>/dev/null || true
+
+
+4.3  Comandos mpv que usa el proyecto
+────────────────────────────────────────
+
+  PAUSAR/REANUDAR:
+    {"command":["cycle","pause"]}
+    Alterna entre pausa y reproducción
+
+  SIGUIENTE:
+    {"command":["playlist-next"]}
+    Va a la siguiente canción (con --playlist)
+
+  ANTERIOR:
+    {"command":["playlist-prev"]}
+    Vuelve a la canción anterior
+
+  DETENER:
+    {"command":["stop"]}
+    Detiene la reproducción
+
+  CARGAR CANCIÓN:
+    {"command":["loadfile","URL","replace"]}
+    Reemplaza la canción actual por otra
+
+  OBTENER TÍTULO:
+    {"command":["get_property","media-title"]}
+    mpv responde: {"data":"Nombre Cancion","error":null}
+
+  SABER SI PAUSA:
+    {"command":["get_property","pause"]}
+    mpv responde: {"data":true} o {"data":false}
+
+
+4.4  El socket — cómo funciona
+─────────────────────────────────
+  1. mpv arranca con --input-ipc-server=/tmp/mpv-socket
+  2. mpv crea el archivo /tmp/mpv-socket
+  3. bar_busq.sh finaliza (exit 0), mpv sigue corriendo
+  4. El usuario ejecuta yt-music-toggle.sh
+  5. toggle.sh manda {"command":["cycle","pause"]} al socket
+  6. mpv recibe, lo procesa, pausa o reanuda
+  7. La terminal de Alacritty muestra el cambio
+
+  📌 IMPORTANTE: Eventualmente el usuario ejecuta stop.sh
+  stop.sh limpia: rm -f /tmp/mpv-socket
+
+
+═══════════════════════════════════════════════════════════════
+FASE 5: yt-dlp (2 días)
+═══════════════════════════════════════════════════════════════
+
+5.1  ¿Qué es yt-dlp?
+─────────────────────
+  Descarga videos de YouTube (y 1000 sitios más).
+  En el proyecto NO descarga nada, solo LISTA canciones.
+
+  📌 EJEMPLO: Obtener ID de video
+    yt-dlp "ytsearch1:Never Gonna Give You Up" --get-id
+    → dQw4w9WgXcQ
+
+
+5.2  Comando que usa el proyecto
+───────────────────────────────────
+  yt-dlp --flat-playlist --playlist-end 50 \
+    --print "https://music.youtube.com/watch?v=%(id)s" \
+    "https://music.youtube.com/watch?v=${ID}&list=RD${ID}"
+
+  --flat-playlist  → No descarga NADA, solo lista los videos
+  --playlist-end 50 → Máximo 50 canciones
+  --print "..."     → Imprime con formato personalizado
+  %(id)s            → El ID del video
+  &list=RD${ID}    → Radio Mix basado en esa canción
+
+  ¿QUÉ DEVUELVE?
+    https://music.youtube.com/watch?v=nlXqp3FVrq8
+    https://music.youtube.com/watch?v=JwsgCnBLL4A
+    https://music.youtube.com/watch?v=CbEst0K063c
+    ...
+
+
+5.3  get_links.sh — el script que usa yt-dlp
+───────────────────────────────────────────────
+  Lee names.txt (lista de canciones)
+  Por cada nombre, busca en YouTube con yt-dlp
+  Guarda los links en links.txt
+
+  yt-dlp "ytsearch1:${query}" --get-id 2>/dev/null | head -n 1
+  → Busca la 1ra coincidencia de "query" y devuelve el ID
+  → "ytsearch1:" es el formato de búsqueda de yt-dlp
+
+
+═══════════════════════════════════════════════════════════════
+FASE 6: fzf (1 día)
+═══════════════════════════════════════════════════════════════
+
+6.1  ¿Qué es fzf?
+─────────────────
+  Buscador difuso (fuzzy finder) para terminal.
+  Escribís parte del nombre y te muestra coincidencias.
+
+  📌 EN EL PROYECTO: Elegir canción de los resultados
+
+
+6.2  Flags que usa el proyecto
+─────────────────────────────────
+  cat "$TMPFILE_FZF" | fzf \
+    --prompt="🎵  "           → Texto del prompt
+    --delimiter="│"           → Separador de columnas
+    --with-nth=1              → Busca solo en la columna 1 (título)
+    --height=100%             → Ocupa toda la ventana
+    --layout=reverse          → Resultados de arriba a abajo
+    --border=rounded          → Bordes redondeados
+    --info=inline             → Info en línea
+    --color='...'             → Colores personalizados (Catppuccin)
+
+  📌 FLUJO COMPLETO:
+    1. TMPFILE_FZF tiene: "Título — Artista │ videoID"
+    2. fzf muestra solo "Título — Artista" (with-nth=1)
+    3. Usuario selecciona con Enter
+    4. awk extrae el último campo (videoID)
+
+
+═══════════════════════════════════════════════════════════════
+FASE 7: bspwm + Alacritty (2 días)
+═══════════════════════════════════════════════════════════════
+
+7.1  bspc rule: posicionar ventanas
+───────────────────────────────────────
+  bspc rule -a CLASS -o PROPIEDADES --one-shot
+
+  📌 EN EL PROYECTO:
+    bspc rule -a Alacritty_Temporal_query \
+      -o state=floating center=true rectangle=500x180+0+0 --one-shot
+    → La ventana será FLOTANTE, CENTRADA, de 500x180
+
+    bspc rule -a Alacritty_Temporal desktop='^1' --one-shot
+    → La ventana irá al ESCRITORIO 1
+
+  -a CLASS    → Aplica a ventanas con esta clase
+  -o props   → Propiedades (flotante, tamaño, escritorio)
+  --one-shot  → Solo para la PRÓXIMA ventana
+
+
+7.2  Alacritty: terminal ultrarrápida
+─────────────────────────────────────────
+  alacritty --class NOMBRE -e COMANDO
+
+  --class Alacritty_Temporal  → Identifica la ventana (para bspc rule)
+  -e "$SCRIPT"               → Ejecuta el script y al terminar, cierra
+
+  📌 EN EL PROYECTO:
+    alacritty --class Alacritty_Temporal_query -e "$INPUT_SCRIPT" &
+    → Abre terminal con el input de búsqueda
+
+    alacritty --class Alacritty_Temporal -e mpv ... &
+    → Abre terminal con mpv reproduciendo
+
+
+7.3  notify-send: notificaciones del escritorio
+─────────────────────────────────────────────────
+  notify-send -u low "Título" "Mensaje"
+  notify-send -u critical "Error" "Algo salió mal"
+
+  📌 EN EL PROYECTO:
+    notify-send -u low "󰎆 Reproduciendo" "$TITLE — $ARTIST"
+    notify-send -u critical "ytmusic" "Sin resultados para: $QUERY"
+
+
+═══════════════════════════════════════════════════════════════
+FASE 8: BUENAS PRÁCTICAS (aplicar SIEMPRE)
+═══════════════════════════════════════════════════════════════
+
+8.1  set -uo pipefail 🧠
+───────────────────────────
+  Al inicio de CADA script:
+    set -uo pipefail
+
+  set -u             → ERROR si usás variable que no existe (ej: "$ALGO" sin definir)
+  set -o pipefail    → ERROR si algún comando del pipe falla
+  (sin -e porque muchos comandos fallan "normalmente", como pkill)
+
+  📌 BENEFICIO: Si escribís mal una variable, el script te avisa.
+
+
+8.2  Siempre "$VAR" (con comillas dobles)
+───────────────────────────────────────────
+  ✅ echo "$TITLE"     ← BIEN
+  ❌ echo $TITLE       ← MAL (si TITLE tiene espacios, los separa)
+
+  ✅ rm -f "$FILE"     ← BIEN
+  ❌ rm -f $FILE       ← MAL (peligroso)
+
+  ✅ mpv_send "$(jq ...)"  ← BIEN
+  ❌ mpv_send $(jq ...)    ← MAL
+
+
+8.3  read only para constantes
+─────────────────────────────────
+  readonly CACHE="${HOME}/.cache/ytmusic"
+  → No podés pisarlo después accidentalmente
+
+
+8.4  Trap siempre que crees archivos temporales
+─────────────────────────────────────────────────
+  TMPFILE=$(mktemp /tmp/algo.XXXXXX)
+  trap 'rm -f "$TMPFILE"' EXIT
+  → Por más que el script explote, el temporal se borra
+
+
+8.5  Separar en funciones
+───────────────────────────
+  Cada paso del proceso → una función
+
+  get_query() { ... }
+  search() { ... }
+  select_song() { ... }
+  play() { ... }
+
+  main() {
+      get_query
+      search
+      select_song
+      play
+  }
+  main "$@"
+
+  → Más fácil de leer, modificar y debuggear
+
+
+8.6  Nombres descriptivos
+───────────────────────────
+  ✅ TMPFILE, SOCKET, PLAYLIST, SELECTED_ID
+  ❌ a, b, temp, foo
+
+
+8.7  || true en comandos opcionales
+─────────────────────────────────────
+  pkill ... || true       → Si no hay proceso que matar, no falla
+  rm -f ... || true       → Si no existe el archivo, no falla
+
+  Con set -o pipefail, algunos comandos rompen el script si fallan.
+  || true dice "si falla, no importa, seguí".
+
+
+═══════════════════════════════════════════════════════════════
+RESUMEN: LÍNEA POR LÍNEA — qué hace cada parte
+═══════════════════════════════════════════════════════════════
+
+Aquí va el análisis línea por línea de bar_busq.sh (la pieza central):
+
+───────────────────────────────────────────────────────────────
+01: #!/usr/bin/env bash
+     → Shebang: ejecutar con bash
+
+02: set -uo pipefail
+     → Detectar errores: variables sin definir y pipes fallidos
+
+04: SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+     → Obtener la carpeta donde está el script
+
+05: source "$SCRIPT_DIR/lib.sh"
+     → Cargar lib.sh (constantes: CACHE, SOCKET, PLAYLIST + mpv_send)
+
+07-09: TMPFILE / cleanup / trap
+     → Preparar limpieza de archivos temporales al salir
+
+11-12: INPUT_RESULT / RESULT_FILE
+     → Rutas donde se guardarán la búsqueda y selección
+
+14-43: get_query()
+     → Abre Alacritty con un formulario para escribir la canción
+     → Espera a que cierren la ventana
+     → Lee lo que escribiste
+
+45-87: search()
+     → Consulta la API de YouTube Music con curl
+     → Extrae los resultados con jq
+     → Los filtra y toma los primeros 5
+
+89-133: select_song()
+     → Prepara los datos para fzf (formatea Título — Artista)
+     → Abre Alacritty con fzf
+     → Espera selección
+     → Extrae el ID, TITLE, ARTIST de la línea seleccionada
+
+135-151: play()
+     → Mata cualquier mpv anterior
+     → Espera que se cierre
+     → Notifica la canción
+     → Genera playlist con yt-dlp (para next/prev)
+     → Abre Alacritty con mpv reproduciendo
+     → Despega el proceso con disown
+
+153-161: main() / main "$@"
+     → Ejecuta las 4 funciones en orden
+
+
+═══════════════════════════════════════════════════════════════
+ARCHIVOS DEL PROYECTO — qué hace cada uno
+═══════════════════════════════════════════════════════════════
+
+bar_busq.sh          → Entry point. Busca, selecciona y reproduce.
+lib.sh               → Constantes (CACHE, SOCKET, PLAYLIST) y mpv_send()
+yt-music-next.sh     → Siguiente canción (playlist-next)
+yt-music-prev.sh     → Canción anterior (playlist-prev)
+yt-music-toggle.sh   → Pausa/Reanudar (cycle pause)
+yt-music-stop.sh     → Detener y limpiar (stop + pkill + rm)
+yt-music-title.sh    → Mostrar título actual (get_property media-title)
+yt-music-polybar.sh  → Icono para polybar (pausa/reproduciendo/parado)
+get_links.sh         → Lee names.txt, busca cada canción, guarda links
+PLAYLIST_METHOD.md   → Documentación de cómo funciona la playlist
+PLAN_APRENDIZAJE.txt → Este archivo
+
+
+═══════════════════════════════════════════════════════════════
+RUTA DE ESTUDIO — calendario sugerido
+═══════════════════════════════════════════════════════════════
+
+Semana 1:  Terminal (pwd, ls, cd, cat, rm, mv, cp, rutas)
+Semana 2:  Bash variables, comillas, $(), [[ ]], && || 
+Semana 3:  Bash archivos (>, >>, <, heredoc, grep, awk, sed)
+Semana 4:  Bash procesos (&, $!, pkill, disown, sleep, trap)
+Semana 5:  JSON (estructura) + jq básico (.key, .[], select, //)
+Semana 6:  curl (-s, -X, -H, -d) + APIs + pipe con jq
+Semana 7:  yt-dlp (--flat-playlist, --playlist-end, --print)
+Semana 8:  fzf (prompt, delimiter, with-nth) + socat + mpv IPC
+Semana 9:  bspwm (bspc rule, desktop, state) + Alacritty + notify-send
+Semana 10: Integrar todo — leer bar_busq.sh línea por línea
+           y entender CÓMO encaja cada concepto
+
+Al final de la semana 10, deberías poder:
+  ✅ Leer y entender CADA línea de bar_busq.sh
+  ✅ Modificar cualquier parte del proyecto
+  ✅ Crear nuevos scripts que usen mpv_send()
+  ✅ Debuggear cuando algo falle
+
+
+═══════════════════════════════════════════════════════════════
+RECURSOS RECOMENDADOS
+═══════════════════════════════════════════════════════════════
+
+Bash:
+  • BashGuide:     https://mywiki.wooledge.org/BashGuide
+  • Bash Hackers:  https://wiki.bash-hackers.org/
+  • man bash       (en la terminal)
+
+jq:
+  • jq Manual:     https://stedolan.github.io/jq/manual/
+  • jq Playground: https://jqplay.org/  (practicar online)
+
+mpv IPC:
+  • mpv docs:      https://mpv.io/manual/stable/#list-of-input-commands
+
+yt-dlp:
+  • yt-dlp docs:   https://github.com/yt-dlp/yt-dlp#usage
+
+fzf:
+  • fzf README:    https://github.com/junegunn/fzf
+
+Práctica:
+  • El proyecto MISMO es tu mejor práctica.
+    Intentá modificar algo cada vez que aprendas un concepto nuevo.
